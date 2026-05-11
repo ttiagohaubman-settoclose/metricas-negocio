@@ -1,43 +1,34 @@
 import { NextResponse } from "next/server";
 
-const GHL_BASE_URL = "https://services.leadconnectorhq.com";
-const GHL_API_VERSION = "2021-07-28";
-
 export async function GET() {
   const token = process.env.GHL_API_TOKEN;
   const locationId = process.env.GHL_LOCATION_ID;
 
   if (!token || !locationId) {
-    return NextResponse.json(
-      { error: "GHL_API_TOKEN o GHL_LOCATION_ID no están configurados" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Tokens no configurados" }, { status: 500 });
   }
 
-  try {
-    const url = `${GHL_BASE_URL}/locations/${locationId}`;
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Version: GHL_API_VERSION,
-        Accept: "application/json",
-      },
-    });
+  const calendarId = "Kei59Zx6HpJCZdpSpYDN";
+const startDate = Date.now() - 90 * 24 * 60 * 60 * 1000;
+const endDate = Date.now() + 90 * 24 * 60 * 60 * 1000;
+  const url = new URL("https://services.leadconnectorhq.com/calendars/events");
+  url.searchParams.set("locationId", locationId);
+  url.searchParams.set("calendarId", calendarId);
+  url.searchParams.set("startTime", String(startDate));
+  url.searchParams.set("endTime", String(endDate));
 
-    const data = await res.json();
+  const res = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Version: "2021-04-15",
+      Accept: "application/json",
+    },
+  });
 
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: "GHL devolvió error", status: res.status, details: data },
-        { status: 500 }
-      );
-    }
+  const data = await res.json();
 
-    return NextResponse.json({ ok: true, location: data });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Error al consultar GHL API", details: String(error) },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json({
+    status: res.status,
+    response: data,
+  });
 }
