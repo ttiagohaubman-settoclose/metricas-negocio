@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "../lib/supabase";
 import { META_METRICS_CATALOG, type MetaMetricDef } from "../lib/meta-metrics-catalog";
@@ -264,6 +264,8 @@ function ClientFormModal({ client, onClose, onSaved }: { client: Client | null; 
   ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(client?.avatar_url || null);
 
   useEffect(() => {
     async function loadFullData() {
@@ -373,6 +375,13 @@ function ClientFormModal({ client, onClose, onSaved }: { client: Client | null; 
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <AvatarUploader
+            clientId={client?.id}
+            currentUrl={avatarUrl}
+            onUploaded={(url: string) => setAvatarUrl(url)}
+            uploading={uploading}
+            setUploading={setUploading}
+          />
           <Field label="Name" value={form.name} onChange={(v: string) => setForm({ ...form, name: v })} placeholder="Client full name" />
 
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
@@ -2090,6 +2099,124 @@ function CustomMetricFormModal({ initial, existingIds, onClose, onSave }: {
             padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600,
             cursor: "pointer", fontFamily: "inherit",
           }}>{isEditing ? "Save changes" : "Create metric"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+// ============================================================ AVATAR UPLOADER ============================================================
+function AvatarUploader({ clientId, currentUrl, onUploaded, uploading, setUploading }: {
+  clientId?: string;
+  currentUrl: string | null;
+  onUploaded: (url: string) => void;
+  uploading: boolean;
+  setUploading: (b: boolean) => void;
+}) {
+  const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!clientId) {
+      setError("Save the client first, then upload the avatar.");
+      return;
+    }
+
+    setError("");
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("client_id", clientId);
+
+      const res = await fetch("/api/admin/upload-avatar", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+
+      onUploaded(data.avatar_url);
+    } catch (e: any) {
+      setError(e.message);
+    }
+    setUploading(false);
+  }
+
+  return (
+    <div>
+      <label style={{
+        display: "block", fontSize: 11, fontWeight: 600,
+        textTransform: "uppercase", letterSpacing: "0.06em",
+        color: "var(--ink-muted)", marginBottom: 6,
+      }}>
+        Avatar
+      </label>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 12,
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-strong)",
+          overflow: "hidden",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          {currentUrl ? (
+            <img src={currentUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" strokeWidth="1.5" style={{ width: 28, height: 28 }}>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          )}
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || !clientId}
+            style={{
+              background: "transparent",
+              border: "1px solid var(--border-strong)",
+              color: "var(--ink)",
+              padding: "8px 14px",
+              borderRadius: 8,
+              fontSize: 12,
+              cursor: uploading || !clientId ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+              fontWeight: 500,
+              opacity: uploading || !clientId ? 0.5 : 1,
+            }}
+          >
+            {uploading ? "Uploading..." : (currentUrl ? "Change image" : "Upload image")}
+          </button>
+          <div style={{ fontSize: 10, color: "var(--ink-dim)", marginTop: 6 }}>
+            {!clientId ? "Save the client first before uploading an avatar." : "JPG, PNG · max 2MB"}
+          </div>
+          {error && (
+            <div style={{
+              background: "rgba(255,80,80,0.1)",
+              border: "1px solid rgba(255,80,80,0.3)",
+              color: "#ff8080",
+              padding: "6px 10px",
+              borderRadius: 6,
+              fontSize: 11,
+              marginTop: 6,
+            }}>
+              {error}
+            </div>
+          )}
         </div>
       </div>
     </div>
