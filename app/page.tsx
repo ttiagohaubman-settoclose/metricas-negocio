@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useDashboardData, type DatePreset } from "./hooks/useDashboardData";
+import { exportFullReport, type ExportContext } from "./lib/pdf-export";
 
 const fmt = {
   currency: (v: number) => "$" + Math.round(v).toLocaleString("en-US"),
@@ -140,7 +141,8 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [drilldownMetric, setDrilldownMetric] = useState<MetricId | null>(null);
   const [selectedAdAccountId, setSelectedAdAccountId] = useState<string | undefined>(undefined);
-
+const [showPdfModal, setShowPdfModal] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const { clients, isAdmin, meta, ghl, market, loading, lastUpdated, agency } = useDashboardData(preset, since, until, selectedAdAccountId);
   const getClientById = (id: string) => clients.find((c) => c.id === id);
 
@@ -197,7 +199,34 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="header-controls">
-            <ThemeToggle theme={theme} onChange={setTheme} />
+            <button
+              onClick={() => setShowPdfModal(true)}
+              className="no-pdf-export"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--border-strong)",
+                color: "var(--ink)",
+                padding: "8px 14px",
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export PDF
+            </button>
+            <div className="no-pdf-export">
+              <ThemeToggle theme={theme} onChange={setTheme} />
+            </div>
           </div>
         </header>
 
@@ -233,6 +262,21 @@ export default function DashboardPage() {
             meta={meta}
             ghl={ghl}
             onClose={() => setDrilldownMetric(null)}
+          />
+        )}
+        {showPdfModal && (
+          <PdfExportModal
+            onClose={() => setShowPdfModal(false)}
+            isAgency={activeView === "agency"}
+            cfg={cfg}
+            meta={meta}
+            ghl={ghl}
+            clients={clients}
+            agency={agency}
+            range={{ since, until, preset }}
+            selectedAdAccountId={selectedAdAccountId}
+            exporting={exportingPdf}
+            setExporting={setExportingPdf}
           />
         )}
       </main>
@@ -1611,5 +1655,307 @@ function MetricsGrid({ metrics, current, previous, series, selectedMetric, onSel
         </div>
       )}
     </>
+  );
+}
+// ============================================================ PDF EXPORT MODAL ============================================================
+// ============================================================ PDF EXPORT MODAL ============================================================
+// ============================================================ PDF EXPORT MODAL ============================================================
+function PdfExportModal({ onClose, isAgency, cfg, clients, meta, ghl, agency, range, selectedAdAccountId, exporting, setExporting }: any) {
+  const [analysis, setAnalysis] = useState("");
+  const [error, setError] = useState("");
+
+  async function handleExport() {
+    setError("");
+    setExporting(true);
+
+    try {
+      // Calcular rango de fechas
+      const today = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      let since: string, until: string;
+      if (range.preset === "custom" && range.since && range.until) {
+        since = range.since;
+        until = range.until;
+      } else {
+        const todayStr = toDateStr(today);
+        switch (range.preset) {
+          case "today": since = todayStr; until = todayStr; break;
+          case "last_30d": since = toDateStr(new Date(today.getTime() - 29 * 86400000)); until = todayStr; break;
+          case "this_month": since = toDateStr(new Date(today.getFullYear(), today.getMonth(), 1)); until = todayStr; break;
+          default: since = toDateStr(new Date(today.getTime() - 6 * 86400000)); until = todayStr;
+        }
+      }
+
+      // Construir contexto del reporte
+      let clientName: string, state: string;
+      let metricsToExport: any[] = [];
+      let pipeline: any = undefined;
+      let economics: any = undefined;
+      let avatarUrl: string | null = null;
+      if (isAgency) {
+        clientName = "Vista Agencia · Consolidado";
+        state = `${clients.length} clientes activos`;
+
+        // Build métricas dinámicas para agencia
+        const metricsToShow = buildMetricsToShow(agency?.activeMetrics || [], agency?.customMetrics || []);
+
+        // Sumar totales de todos los clientes
+        const totalCurrent: any = {};
+        const totalPrevious: any = {};
+        const totalSeries: Record<string, Record<string, number>> = {};
+        metricsToShow.forEach((m: any) => {
+          totalCurrent[m.id] = 0;
+          totalPrevious[m.id] = 0;
+          totalSeries[m.id] = {};
+        });
+        meta.forEach((c: any) => {
+          metricsToShow.forEach((m: any) => {
+            totalCurrent[m.id] += Number(c.current?.[m.id] || 0);
+            totalPrevious[m.id] += Number(c.previous?.[m.id] || 0);
+          });
+          (c.series || []).forEach((p: any) => {
+            metricsToShow.forEach((m: any) => {
+              totalSeries[m.id][p.date] = (totalSeries[m.id][p.date] || 0) + Number(p[m.id] || 0);
+            });
+          });
+        });
+
+        const labels = Object.keys(totalSeries[metricsToShow[0]?.id] || {}).sort();
+        metricsToExport = metricsToShow.map((m: any) => ({
+          id: m.id,
+          label: m.label,
+          format: m.format,
+          lowerBetter: m.lowerBetter,
+          current: totalCurrent[m.id],
+          previous: totalPrevious[m.id],
+          series: labels.map((d) => totalSeries[m.id][d] || 0),
+          seriesLabels: labels,
+        }));
+
+        // Pipeline consolidado
+        const pipe: any = { scheduled: 0, showed: 0, venta: 0, pagada: 0, noshow: 0, cancelled: 0 };
+        const prevPipe: any = { scheduled: 0, showed: 0, venta: 0, pagada: 0, noshow: 0, cancelled: 0 };
+        ghl.forEach((g: any) => {
+          if (!g?.current) return;
+          ["scheduled", "showed", "venta", "pagada", "noshow", "cancelled"].forEach((k) => {
+            pipe[k] += g.current[k] || 0;
+            prevPipe[k] += g.previous?.[k] || 0;
+          });
+        });
+        pipeline = {
+          ...pipe,
+          prev_scheduled: prevPipe.scheduled,
+          prev_showed: prevPipe.showed,
+          prev_venta: prevPipe.venta,
+          prev_pagada: prevPipe.pagada,
+          prev_noshow: prevPipe.noshow,
+          prev_cancelled: prevPipe.cancelled,
+        };
+
+        // Economics agencia
+        let revenue = 0, fees = 0, ventas = 0, pagadas = 0;
+        ghl.forEach((c: any) => {
+          const clientCfg = clients.find((cli: any) => cli.name === c.name);
+          if (!clientCfg || !c.current) return;
+          const v = (c.current.venta || 0) + (c.current.pagada || 0);
+          ventas += v;
+          pagadas += c.current.pagada || 0;
+          revenue += v * clientCfg.saleValue;
+          fees += v * clientCfg.feePerSale;
+        });
+        economics = {
+          revenue, spend: totalCurrent.spend || 0, fee: fees,
+          profit: revenue - (totalCurrent.spend || 0) - fees,
+          label1: "Revenue total", label2: "Ad Spend", label3: "Tu fee total", label4: "Profit agencia",
+        };
+      } else {
+        if (!cfg) { setError("No client selected"); setExporting(false); return; }
+        clientName = cfg.name;
+        state = cfg.state;
+        avatarUrl = cfg.avatarUrl || null;
+
+        const m = meta.find((c: any) => c.name === cfg.name);
+        const metricsToShow = buildMetricsToShow(m?.activeMetrics || [], m?.customMetrics || []);
+
+        metricsToExport = metricsToShow.map((mm: any) => ({
+          id: mm.id,
+          label: mm.label,
+          format: mm.format,
+          lowerBetter: mm.lowerBetter,
+          current: Number(m?.current?.[mm.id] || 0),
+          previous: Number(m?.previous?.[mm.id] || 0),
+          series: (m?.series || []).map((s: any) => Number(s[mm.id] || 0)),
+          seriesLabels: (m?.series || []).map((s: any) => s.date),
+        }));
+
+        const g = ghl.find((c: any) => c.name === cfg.name);
+        if (g?.current) {
+          pipeline = {
+            scheduled: g.current.scheduled || 0,
+            showed: g.current.showed || 0,
+            venta: g.current.venta || 0,
+            pagada: g.current.pagada || 0,
+            noshow: g.current.noshow || 0,
+            cancelled: g.current.cancelled || 0,
+            prev_scheduled: g.previous?.scheduled || 0,
+            prev_showed: g.previous?.showed || 0,
+            prev_venta: g.previous?.venta || 0,
+            prev_pagada: g.previous?.pagada || 0,
+            prev_noshow: g.previous?.noshow || 0,
+            prev_cancelled: g.previous?.cancelled || 0,
+          };
+        }
+
+        const ventas = (g?.current?.venta || 0) + (g?.current?.pagada || 0);
+        const revenue = ventas * cfg.saleValue;
+        const fee = ventas * cfg.feePerSale;
+        const spend = m?.current?.spend || 0;
+        economics = {
+          revenue, spend, fee, profit: revenue - spend - fee,
+          label1: "Revenue cliente", label2: "Ad spend", label3: "Tu fee total", label4: "Profit cliente",
+        };
+      }
+
+      // Métrica principal: la primera o la "spend"
+      const mainMetricId = metricsToExport.find((m) => m.id === "spend")?.id || metricsToExport[0]?.id;
+
+      const filenameSlug = isAgency ? "agencia" : clientName.toLowerCase().replace(/\s+/g, "-");
+      const dateSlug = new Date().toISOString().split("T")[0];
+      const filename = `${filenameSlug}-reporte-${dateSlug}.pdf`;
+
+      // Cerrar el modal antes de exportar
+      onClose();
+      await new Promise((r) => setTimeout(r, 300));
+
+      await exportFullReport({
+        clientName,
+        state,
+        period: { since, until },
+        isAgency,
+        avatarUrl,
+        metrics: metricsToExport,
+        mainMetricId,
+        pipeline,
+        economics,
+        analysis: analysis.trim() || undefined,
+      }, filename);
+    } catch (e: any) {
+      setError(e.message || "Error generating PDF");
+      setExporting(false);
+    }
+    setExporting(false);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={() => !exporting && onClose()}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
+        <div className="modal-header">
+          <div>
+            <div className="modal-title">Export PDF</div>
+            <div className="modal-subtitle">
+              Generá un reporte profesional con los datos del período seleccionado
+            </div>
+          </div>
+          <button className="modal-close" onClick={() => !exporting && onClose()}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={{
+              display: "block", fontSize: 11, fontWeight: 600,
+              textTransform: "uppercase", letterSpacing: "0.06em",
+              color: "var(--ink-muted)", marginBottom: 8,
+            }}>
+              Análisis y conclusiones (opcional)
+            </label>
+            <textarea
+              value={analysis}
+              onChange={(e) => setAnalysis(e.target.value)}
+              placeholder={`Escribí acá tu análisis del período.\n\nFormato soportado:\n# Título grande\n## Subtítulo\n### Sub-subtítulo\n**texto en negrita**\n*texto en itálica*\n- Bullet 1\n- Bullet 2`}
+              rows={12}
+              disabled={exporting}
+              style={{
+                width: "100%",
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border-strong)",
+                borderRadius: 8,
+                padding: "12px 14px",
+                fontSize: 13,
+                color: "var(--ink)",
+                fontFamily: "inherit",
+                outline: "none",
+                resize: "vertical",
+                minHeight: 200,
+                lineHeight: 1.6,
+              }}
+            />
+            <div style={{ fontSize: 10, color: "var(--ink-dim)", marginTop: 6, lineHeight: 1.5 }}>
+              Soporta Markdown básico: <code>**negrita**</code>, <code>*itálica*</code>, <code># Título</code>, <code>- Lista</code>.
+              Si dejás el campo vacío, el PDF no incluirá página de análisis.
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div style={{
+            marginTop: 16, padding: 12,
+            background: "rgba(255,80,80,0.1)",
+            border: "1px solid rgba(255,80,80,0.3)",
+            color: "#ff8080",
+            borderRadius: 8,
+            fontSize: 12,
+          }}>
+            {error}
+          </div>
+        )}
+
+        {exporting && (
+          <div style={{
+            marginTop: 16, padding: 12,
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            fontSize: 12, color: "var(--ink-muted)", textAlign: "center",
+          }}>
+            Generando PDF... esto puede tardar unos segundos
+          </div>
+        )}
+
+        <div style={{
+          display: "flex", justifyContent: "flex-end", gap: 8,
+          marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)",
+        }}>
+          <button onClick={onClose} disabled={exporting} style={{
+            background: "transparent",
+            border: "1px solid var(--border-strong)",
+            color: "var(--ink-muted)",
+            padding: "10px 16px", borderRadius: 8,
+            fontSize: 13, cursor: exporting ? "not-allowed" : "pointer",
+            fontFamily: "inherit",
+          }}>Cancelar</button>
+          <button onClick={handleExport} disabled={exporting} style={{
+            background: "var(--ink)",
+            color: "var(--bg)",
+            border: "none",
+            padding: "10px 20px", borderRadius: 8,
+            fontSize: 13, fontWeight: 600,
+            cursor: exporting ? "not-allowed" : "pointer",
+            fontFamily: "inherit",
+            opacity: exporting ? 0.6 : 1,
+            display: "inline-flex", alignItems: "center", gap: 6,
+          }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            {exporting ? "Generando..." : "Generar PDF"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
