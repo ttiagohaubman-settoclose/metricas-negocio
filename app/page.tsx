@@ -139,7 +139,7 @@ export default function DashboardPage() {
   const [until, setUntil] = useState<string>();
   const [theme, setTheme] = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [drilldownMetric, setDrilldownMetric] = useState<MetricId | null>(null);
+const [drilldownMetric, setDrilldownMetric] = useState<string | null>(null);
   const [selectedAdAccountId, setSelectedAdAccountId] = useState<string | undefined>(undefined);
 const [showPdfModal, setShowPdfModal] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
