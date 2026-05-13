@@ -1720,6 +1720,58 @@ function PdfExportModal({ onClose, isAgency, cfg, clients, meta, ghl, agency, ra
             });
           });
         });
+        // Recalcular métricas derivadas (CPC, CTR, etc.) para no sumarlas mal
+    const recalcDerived = (totals: any) => {
+          const spend = totals.spend || 0;
+          const clicks = totals.clicks || 0;
+          const linkClicks = totals.linkClicks || 0;
+          const impressions = totals.impressions || 0;
+          const reach = totals.reach || 0;
+          const leads = totals.leads || 0;
+          const lpv = totals.landingPageViews || 0;
+          const uniqueClicks = totals.uniqueClicks || 0;
+          const outboundClicks = totals.outboundClicks || 0;
+          const messagingStarted = totals.messagingStarted || 0;
+          const thruplays = totals.thruplays || 0;
+
+          // Costos
+          if (clicks > 0) totals.cpc = spend / clicks;
+          if (impressions > 0) totals.cpm = (spend / impressions) * 1000;
+          if (reach > 0) totals.cpp = (spend / reach) * 1000;
+          if (linkClicks > 0) totals.costPerLinkClick = spend / linkClicks;
+          if (leads > 0) totals.costPerLead = spend / leads;
+          if (lpv > 0) totals.costPerLandingPageView = spend / lpv;
+          if (thruplays > 0) totals.costPerThruplay = spend / thruplays;
+          if (messagingStarted > 0) totals.costPerMessagingStart = spend / messagingStarted;
+
+          // CTRs
+          if (impressions > 0) totals.ctr = (clicks / impressions) * 100;
+          if (impressions > 0) totals.linkCTR = (linkClicks / impressions) * 100;
+          if (impressions > 0) totals.uniqueCTR = (uniqueClicks / impressions) * 100;
+          if (impressions > 0) totals.outboundClicksCTR = (outboundClicks / impressions) * 100;
+
+          // Frecuencia
+          if (reach > 0) totals.frequency = impressions / reach;
+        };
+        
+        recalcDerived(totalCurrent);
+        recalcDerived(totalPrevious);
+// Recalcular linkCTR y ctr usando promedio simple (igual que el dashboard)
+        const recalcAsAverage = (totals: any, key: "current" | "previous") => {
+          let sumLinkCTR = 0, sumCTR = 0, count = 0;
+          meta.forEach((c: any) => {
+            const data = c[key] || {};
+            sumLinkCTR += Number(data.linkCTR || 0);
+            sumCTR += Number(data.ctr || 0);
+            count++;
+          });
+          if (count > 0) {
+            totals.linkCTR = sumLinkCTR / count;
+            totals.ctr = sumCTR / count;
+          }
+        };
+        recalcAsAverage(totalCurrent, "current");
+        recalcAsAverage(totalPrevious, "previous");
 
         const labels = Object.keys(totalSeries[metricsToShow[0]?.id] || {}).sort();
         metricsToExport = metricsToShow.map((m: any) => ({
@@ -1764,10 +1816,23 @@ function PdfExportModal({ onClose, isAgency, cfg, clients, meta, ghl, agency, ra
           revenue += v * clientCfg.saleValue;
           fees += v * clientCfg.feePerSale;
         });
+       // Calcular revenue de pagadas (solo deals cobrados)
+        let revenuePagadas = 0;
+        ghl.forEach((c: any) => {
+          const clientCfg = clients.find((cli: any) => cli.name === c.name);
+          if (!clientCfg || !c.current) return;
+          revenuePagadas += (c.current.pagada || 0) * clientCfg.saleValue;
+        });
+
         economics = {
-          revenue, spend: totalCurrent.spend || 0, fee: fees,
-          profit: revenue - (totalCurrent.spend || 0) - fees,
-          label1: "Revenue total", label2: "Ad Spend", label3: "Tu fee total", label4: "Profit agencia",
+          revenue,
+          spend: fees,
+          fee: ventas,
+          profit: revenuePagadas,
+          label1: "Revenue total clientes",
+          label2: "Tu fee total",
+          label3: "Ventas totales",
+          label4: "Pagadas (cobrado)",
         };
       } else {
         if (!cfg) { setError("No client selected"); setExporting(false); return; }

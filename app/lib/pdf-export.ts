@@ -242,25 +242,7 @@ function buildChartSVG(metric: ExportMetric): string {
 function buildKpiCard(m: ExportMetric, isSelected: boolean): string {
   const { change, isPositive } = calcChange(m.current, m.previous, m.lowerBetter);
   const showChange = m.previous !== 0 || m.current !== 0;
-
-  // Sparkline simple
-  const w = 100, h = 22;
-  let sparkSvg = "";
-  if (m.series.length > 0) {
-    const max = Math.max(...m.series, 1);
-    const min = Math.min(0, Math.min(...m.series));
-    const range = max - min || 1;
-    const pts = m.series.map((v, i) => {
-      const x = (i / Math.max(1, m.series.length - 1)) * w;
-      const y = h - ((v - min) / range) * h;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(" ");
-    sparkSvg = `
-      <svg viewBox="0 0 ${w} ${h}" style="width: 100%; height: ${h}px; margin-top: 6px;" preserveAspectRatio="none">
-        <polyline points="${pts}" fill="none" stroke="#000" stroke-width="1.2" vector-effect="non-scaling-stroke" />
-      </svg>
-    `;
-  }
+const sparkSvg = "";
 
   return `
     <div style="
@@ -345,13 +327,13 @@ function buildReportHTML(ctx: ExportContext, logoBase64: string | null): string 
           ];
           return items.map((i) => `
             <div style="
-              background: ${i.dark ? "#000" : "#fff"};
-              color: ${i.dark ? "#fff" : "#000"};
-              border: 1px solid ${i.dark ? "#000" : "#e5e5e5"};
+              background: #fff;
+              color: #000;
+              border: 1px solid #e5e5e5;
               border-radius: 6px;
               padding: 10px;
             ">
-              <div style="font-size: 8px; color: ${i.dark ? "#999" : "#999"}; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-bottom: 4px;">${i.label}</div>
+              <div style="font-size: 8px; color: #999; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-bottom: 4px;">${i.label}</div>
               <div style="font-size: 20px; font-weight: 700;">${i.value}</div>
             </div>
           `).join("");
@@ -378,7 +360,7 @@ function buildReportHTML(ctx: ExportContext, logoBase64: string | null): string 
         </div>
         <div style="border: 1px solid #e5e5e5; border-radius: 6px; padding: 12px;">
           <div style="font-size: 8px; color: #999; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-bottom: 6px;">${escapeHtml(ctx.economics.label3 || "Fee")}</div>
-          <div style="font-size: 18px; font-weight: 700;">${formatCurrency(ctx.economics.fee)}</div>
+          <div style="font-size: 18px; font-weight: 700;">${ctx.isAgency ? Math.round(ctx.economics.fee).toLocaleString("en-US") : formatCurrency(ctx.economics.fee)}</div>
         </div>
         <div style="
           border: 1px solid #e5e5e5;
@@ -429,7 +411,7 @@ function buildReportHTML(ctx: ExportContext, logoBase64: string | null): string 
             ` : ""}
             <div style="min-width: 0;">
               <div style="font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 0.16em; font-weight: 600; margin-bottom: 4px;">Reporte</div>
-              <div style="font-size: 22px; font-weight: 700; color: #000; letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(ctx.clientName)}</div>
+              <div style="font-size: 22px; font-weight: 700; color: #000; letter-spacing: -0.02em; line-height: 1.1; line-height: 1.2;">${escapeHtml(ctx.clientName)}</div>
               <div style="font-size: 11px; color: #666; margin-top: 2px;">${escapeHtml(ctx.state)}</div>
             </div>
           </div>

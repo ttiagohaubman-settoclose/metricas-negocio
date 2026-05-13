@@ -231,6 +231,13 @@ const METRIC_TO_META: Record<string, MetaFieldMap> = {
 };
 
 // Conjunto de métricas por defecto si la cuenta no tiene config
+// Métricas base que siempre se piden a Meta API
+// (se necesitan para calcular derivadas correctamente en Vista Agencia)
+const ALWAYS_FETCH = [
+  "spend", "clicks", "linkClicks", "impressions", "reach",
+  "leads", "landingPageViews", "uniqueClicks", "outboundClicks",
+  "messagingStarted", "thruplays",
+];
 const DEFAULT_METRICS = [
   "spend", "linkClicks", "costPerLinkClick", "linkCTR",
   "leads", "costPerLead", "landingPageViews", "costPerLandingPageView",
@@ -487,7 +494,7 @@ export async function GET(request: Request) {
       });
 
       // Lista total de métricas curadas a calcular
-      const allCuratedToFetch = Array.from(new Set([...activeMetricIds, ...formulaMetrics]))
+      const allCuratedToFetch = Array.from(new Set([...activeMetricIds, ...formulaMetrics, ...ALWAYS_FETCH]))
         .filter((id) => METRIC_TO_META[id]);
 
       // Determinar qué fields de Meta API pedir
