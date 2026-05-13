@@ -234,7 +234,7 @@ const [showPdfModal, setShowPdfModal] = useState(false);
 
         <DateFilters
           preset={preset} since={since} until={until}
-          onChange={(p, s, u) => { setPreset(p); setSince(s); setUntil(u); }}
+          onChange={(p: any, s: any, u: any) => { setPreset(p); setSince(s); setUntil(u); }}
         />
 
         {loading ? (
