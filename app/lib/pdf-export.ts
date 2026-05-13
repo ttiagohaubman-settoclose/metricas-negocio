@@ -24,7 +24,7 @@ export type ExportContext = {
   // Métricas activas para mostrar (las del dashboard)
   metrics: ExportMetric[];
   // La métrica principal seleccionada (para el gráfico grande)
-  mainMetricId?: string;
+  mainstringd?: string;
   // Pipeline CRM
   pipeline?: {
     scheduled: number; showed: number; venta: number;
@@ -276,12 +276,12 @@ function buildReportHTML(ctx: ExportContext, logoBase64: string | null): string 
   // KPIs en grid de 4 columnas
   const kpisHTML = ctx.metrics.length > 0 ? `
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px;">
-      ${ctx.metrics.map((m) => buildKpiCard(m, m.id === ctx.mainMetricId)).join("")}
+      ${ctx.metrics.map((m) => buildKpiCard(m, m.id === ctx.mainstringd)).join("")}
     </div>
   ` : "";
 
   // Gráfico de la métrica principal
-  const mainMetric = ctx.metrics.find((m) => m.id === ctx.mainMetricId) || ctx.metrics[0];
+  const mainMetric = ctx.metrics.find((m) => m.id === ctx.mainstringd) || ctx.metrics[0];
   const chartHTML = mainMetric ? `
     <div style="margin-bottom: 20px;">
       <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #000;">

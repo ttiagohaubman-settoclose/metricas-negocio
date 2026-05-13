@@ -976,7 +976,7 @@ function AgencyView({ clients, meta, ghl, market, theme, onDrilldown, agency }: 
           seriesLabels={seriesLabels}
           format={selectedDef.format}
           selectedMetric={selectedMetric}
-          onSelectMetric={(mm: any) => setSelectedMetric(mm as MetricId)}
+          onSelectMetric={(mm: any) => setSelectedMetric(mm as stringd)}
           theme={theme}
           metricsToShow={metricsToShow}
         />
@@ -1050,15 +1050,15 @@ function ClientView({ clientId, clients, meta, ghl, market, theme, onDrilldown, 
     );
   }
 
-  const firstMetricId = metricsToShow[0].id;
-  const [selectedMetric, setSelectedMetric] = useState<string>(firstMetricId);
+  const firststringd = metricsToShow[0].id;
+  const [selectedMetric, setSelectedMetric] = useState<string>(firststringd);
 
   // Si la métrica seleccionada ya no está activa, resetear
   useEffect(() => {
     if (!metricsToShow.find((mm) => mm.id === selectedMetric)) {
-      setSelectedMetric(firstMetricId);
+      setSelectedMetric(firststringd);
     }
-  }, [metricsToShow, selectedMetric, firstMetricId]);
+  }, [metricsToShow, selectedMetric, firststringd]);
   const g = ghl.find((c: any) => c.name === cfg.name);
   const marketClient = market?.clients?.find((c: any) => c.name === cfg.name);
 
@@ -1126,7 +1126,7 @@ function ClientView({ clientId, clients, meta, ghl, market, theme, onDrilldown, 
           seriesLabels={series.map((s: any) => s.date)}
           format={selectedDef.format}
           selectedMetric={selectedMetric}
-          onSelectMetric={(mm: any) => setSelectedMetric(mm as MetricId)}
+          onSelectMetric={(mm: any) => setSelectedMetric(mm as stringd)}
           theme={theme}
           metricsToShow={metricsToShow}
         />
@@ -1884,7 +1884,7 @@ function PdfExportModal({ onClose, isAgency, cfg, clients, meta, ghl, agency, ra
       }
 
       // Métrica principal: la primera o la "spend"
-      const mainMetricId = metricsToExport.find((m) => m.id === "spend")?.id || metricsToExport[0]?.id;
+      const mainstringd = metricsToExport.find((m) => m.id === "spend")?.id || metricsToExport[0]?.id;
 
       const filenameSlug = isAgency ? "agencia" : clientName.toLowerCase().replace(/\s+/g, "-");
       const dateSlug = new Date().toISOString().split("T")[0];
@@ -1901,7 +1901,7 @@ function PdfExportModal({ onClose, isAgency, cfg, clients, meta, ghl, agency, ra
         isAgency,
         avatarUrl,
         metrics: metricsToExport,
-        mainMetricId,
+        mainstringd,
         pipeline,
         economics,
         analysis: analysis.trim() || undefined,
