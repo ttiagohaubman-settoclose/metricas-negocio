@@ -928,7 +928,7 @@ function AgencyView({ clients, meta, ghl, market, theme, onDrilldown, agency }: 
               selected={selectedMetric === m.id}
              onClick={() => { setSelectedMetric(m.id as string); onDrilldown(m.id as string); }}
             />
-          )
+          );
         })}
       </div>
 
