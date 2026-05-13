@@ -970,7 +970,7 @@ type ScopeOption = {
 function MetricsTab({ clients }: { clients: Client[] }) {
   const [scopes, setScopes] = useState<ScopeOption[]>([]);
   const [selectedScopeKey, setSelectedScopeKey] = useState<string>("agency");
-  const [activestringds, setActivestringds] = useState<string[]>([]);
+  const [activeMetricDefs, setActiveMetricDefs] = useState<string[]>([]);
   const [customMetrics, setCustomMetrics] = useState<CustomMetric[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1009,7 +1009,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
         const qs = scope === "agency" ? "scope=agency" : `scope=ad_account&id=${id}`;
         const res = await fetch(`/api/admin/metrics?${qs}`);
         const data = await res.json();
-        setActivestringds(data.metric_ids || []);
+        setActiveMetricDefs(data.metric_ids || []);
         setCustomMetrics((data.custom_metrics || []).map((c: any) => ({
           metric_id: c.metric_id,
           label: c.label,
@@ -1024,26 +1024,26 @@ function MetricsTab({ clients }: { clients: Client[] }) {
     loadConfig();
   }, [selectedScopeKey, scopes.length]);
 
-  function toggleMetric(stringd: string) {
-    if (activestringds.includes(stringd)) {
-      setActivestringds(activestringds.filter((id) => id !== stringd));
+  function toggleMetric(MetricDef: string) {
+    if (activeMetricDefs.includes(MetricDef)) {
+      setActiveMetricDefs(activeMetricDefs.filter((id) => id !== MetricDef));
     } else {
-      setActivestringds([...activestringds, stringd]);
+      setActiveMetricDefs([...activeMetricDefs, MetricDef]);
     }
   }
 
   function moveActive(index: number, direction: -1 | 1) {
-    const next = [...activestringds];
+    const next = [...activeMetricDefs];
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= next.length) return;
     [next[index], next[newIndex]] = [next[newIndex], next[index]];
-    setActivestringds(next);
+    setActiveMetricDefs(next);
   }
 
   function addCustomMetaField(fieldId: string) {
     if (!fieldId.trim()) return;
     const id = fieldId.trim();
-    if (!activestringds.includes(id)) setActivestringds([...activestringds, id]);
+    if (!activeMetricDefs.includes(id)) setActiveMetricDefs([...activeMetricDefs, id]);
     setShowAddMetaField(false);
   }
 
@@ -1053,9 +1053,9 @@ function MetricsTab({ clients }: { clients: Client[] }) {
     setShowCustomMetricForm(null);
   }
 
-  function deleteCustomMetric(stringd: string) {
+  function deleteCustomMetric(MetricDef: string) {
     if (!confirm("Delete this custom metric?")) return;
-    setCustomMetrics(customMetrics.filter((c) => c.metric_id !== stringd));
+    setCustomMetrics(customMetrics.filter((c) => c.metric_id !== MetricDef));
   }
 
   async function handleSave() {
@@ -1071,7 +1071,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
         body: JSON.stringify({
           scope,
           id: id || null,
-          metric_ids: activestringds,
+          metric_ids: activeMetricDefs,
           custom_metrics: customMetrics,
         }),
       });
@@ -1137,20 +1137,20 @@ function MetricsTab({ clients }: { clients: Client[] }) {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
-                Active metrics ({activestringds.length + customMetrics.length})
+                Active metrics ({activeMetricDefs.length + customMetrics.length})
               </div>
               <div style={{ fontSize: 11, color: "var(--ink-muted)" }}>
                 First 8 = cards on dashboard
               </div>
             </div>
 
-            {activestringds.length === 0 && customMetrics.length === 0 ? (
+            {activeMetricDefs.length === 0 && customMetrics.length === 0 ? (
               <div style={{ padding: 24, textAlign: "center", color: "var(--ink-muted)", fontSize: 13 }}>
                 No metrics active yet. Add metrics from the catalog below.
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {activestringds.map((id, index) => {
+                {activeMetricDefs.map((id, index) => {
                   const def = META_METRICS_CATALOG.find((m) => m.id === id);
                   return (
                     <div key={id} style={{
@@ -1174,7 +1174,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
                         </div>
                       </div>
                       <button onClick={() => moveActive(index, -1)} disabled={index === 0} style={iconBtnStyle(index === 0)}>↑</button>
-                      <button onClick={() => moveActive(index, 1)} disabled={index === activestringds.length - 1} style={iconBtnStyle(index === activestringds.length - 1)}>↓</button>
+                      <button onClick={() => moveActive(index, 1)} disabled={index === activeMetricDefs.length - 1} style={iconBtnStyle(index === activeMetricDefs.length - 1)}>↓</button>
                       <button onClick={() => toggleMetric(id)} style={{
                         ...iconBtnStyle(false),
                         color: "#ff8080", borderColor: "rgba(255,80,80,0.4)",
@@ -1247,7 +1247,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
                 }}>{category}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 8 }}>
                   {metrics.map((m) => {
-                    const checked = activestringds.includes(m.id);
+                    const checked = activeMetricDefs.includes(m.id);
                     return (
                       <label key={m.id} title={m.description || ""} style={{
                         display: "flex", alignItems: "center", gap: 10,
@@ -1284,7 +1284,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
             boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
           }}>
             <div style={{ fontSize: 12, color: savedMessage.startsWith("Error") ? "#ff8080" : "var(--ink-muted)" }}>
-              {savedMessage || `${activestringds.length + customMetrics.length} metrics configured`}
+              {savedMessage || `${activeMetricDefs.length + customMetrics.length} metrics configured`}
             </div>
             <button onClick={handleSave} disabled={saving} style={{
               background: "var(--ink)", color: "var(--bg)", border: "none",
@@ -1305,7 +1305,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
       {showCustomMetricForm && (
         <CustomMetricFormModal
           initial={showCustomMetricForm === "new" ? null : showCustomMetricForm}
-          existingIds={[...activestringds, ...customMetrics.map((c) => c.metric_id)]}
+          existingIds={[...activeMetricDefs, ...customMetrics.map((c) => c.metric_id)]}
           onClose={() => setShowCustomMetricForm(null)}
           onSave={saveCustomMetric}
         />
@@ -1547,7 +1547,7 @@ type ScopeOption = {
 function MetricsTab({ clients }: { clients: Client[] }) {
   const [scopes, setScopes] = useState<ScopeOption[]>([]);
   const [selectedScopeKey, setSelectedScopeKey] = useState<string>("agency");
-  const [activestringds, setActivestringds] = useState<string[]>([]);
+  const [activeMetricDefs, setActiveMetricDefs] = useState<string[]>([]);
   const [customMetrics, setCustomMetrics] = useState<CustomMetric[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1586,7 +1586,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
         const qs = scope === "agency" ? "scope=agency" : `scope=ad_account&id=${id}`;
         const res = await fetch(`/api/admin/metrics?${qs}`);
         const data = await res.json();
-        setActivestringds(data.metric_ids || []);
+        setActiveMetricDefs(data.metric_ids || []);
         setCustomMetrics((data.custom_metrics || []).map((c: any) => ({
           metric_id: c.metric_id,
           label: c.label,
@@ -1601,26 +1601,26 @@ function MetricsTab({ clients }: { clients: Client[] }) {
     loadConfig();
   }, [selectedScopeKey, scopes.length]);
 
-  function toggleMetric(stringd: string) {
-    if (activestringds.includes(stringd)) {
-      setActivestringds(activestringds.filter((id) => id !== stringd));
+  function toggleMetric(MetricDef: string) {
+    if (activeMetricDefs.includes(MetricDef)) {
+      setActiveMetricDefs(activeMetricDefs.filter((id) => id !== MetricDef));
     } else {
-      setActivestringds([...activestringds, stringd]);
+      setActiveMetricDefs([...activeMetricDefs, MetricDef]);
     }
   }
 
   function moveActive(index: number, direction: -1 | 1) {
-    const next = [...activestringds];
+    const next = [...activeMetricDefs];
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= next.length) return;
     [next[index], next[newIndex]] = [next[newIndex], next[index]];
-    setActivestringds(next);
+    setActiveMetricDefs(next);
   }
 
   function addCustomMetaField(fieldId: string) {
     if (!fieldId.trim()) return;
     const id = fieldId.trim();
-    if (!activestringds.includes(id)) setActivestringds([...activestringds, id]);
+    if (!activeMetricDefs.includes(id)) setActiveMetricDefs([...activeMetricDefs, id]);
     setShowAddMetaField(false);
   }
 
@@ -1630,9 +1630,9 @@ function MetricsTab({ clients }: { clients: Client[] }) {
     setShowCustomMetricForm(null);
   }
 
-  function deleteCustomMetric(stringd: string) {
+  function deleteCustomMetric(MetricDef: string) {
     if (!confirm("Delete this custom metric?")) return;
-    setCustomMetrics(customMetrics.filter((c) => c.metric_id !== stringd));
+    setCustomMetrics(customMetrics.filter((c) => c.metric_id !== MetricDef));
   }
 
   async function handleSave() {
@@ -1648,7 +1648,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
         body: JSON.stringify({
           scope,
           id: id || null,
-          metric_ids: activestringds,
+          metric_ids: activeMetricDefs,
           custom_metrics: customMetrics,
         }),
       });
@@ -1714,20 +1714,20 @@ function MetricsTab({ clients }: { clients: Client[] }) {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
-                Active metrics ({activestringds.length + customMetrics.length})
+                Active metrics ({activeMetricDefs.length + customMetrics.length})
               </div>
               <div style={{ fontSize: 11, color: "var(--ink-muted)" }}>
                 First 8 = cards on dashboard
               </div>
             </div>
 
-            {activestringds.length === 0 && customMetrics.length === 0 ? (
+            {activeMetricDefs.length === 0 && customMetrics.length === 0 ? (
               <div style={{ padding: 24, textAlign: "center", color: "var(--ink-muted)", fontSize: 13 }}>
                 No metrics active yet. Add metrics from the catalog below.
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {activestringds.map((id, index) => {
+                {activeMetricDefs.map((id, index) => {
                   const def = META_METRICS_CATALOG.find((m) => m.id === id);
                   return (
                     <div key={id} style={{
@@ -1751,7 +1751,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
                         </div>
                       </div>
                       <button onClick={() => moveActive(index, -1)} disabled={index === 0} style={iconBtnStyle(index === 0)}>↑</button>
-                      <button onClick={() => moveActive(index, 1)} disabled={index === activestringds.length - 1} style={iconBtnStyle(index === activestringds.length - 1)}>↓</button>
+                      <button onClick={() => moveActive(index, 1)} disabled={index === activeMetricDefs.length - 1} style={iconBtnStyle(index === activeMetricDefs.length - 1)}>↓</button>
                       <button onClick={() => toggleMetric(id)} style={{
                         ...iconBtnStyle(false),
                         color: "#ff8080", borderColor: "rgba(255,80,80,0.4)",
@@ -1824,7 +1824,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
                 }}>{category}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 8 }}>
                   {metrics.map((m) => {
-                    const checked = activestringds.includes(m.id);
+                    const checked = activeMetricDefs.includes(m.id);
                     return (
                       <label key={m.id} title={m.description || ""} style={{
                         display: "flex", alignItems: "center", gap: 10,
@@ -1861,7 +1861,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
             boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
           }}>
             <div style={{ fontSize: 12, color: savedMessage.startsWith("Error") ? "#ff8080" : "var(--ink-muted)" }}>
-              {savedMessage || `${activestringds.length + customMetrics.length} metrics configured`}
+              {savedMessage || `${activeMetricDefs.length + customMetrics.length} metrics configured`}
             </div>
             <button onClick={handleSave} disabled={saving} style={{
               background: "var(--ink)", color: "var(--bg)", border: "none",
@@ -1882,7 +1882,7 @@ function MetricsTab({ clients }: { clients: Client[] }) {
       {showCustomMetricForm && (
         <CustomMetricFormModal
           initial={showCustomMetricForm === "new" ? null : showCustomMetricForm}
-          existingIds={[...activestringds, ...customMetrics.map((c) => c.metric_id)]}
+          existingIds={[...activeMetricDefs, ...customMetrics.map((c) => c.metric_id)]}
           onClose={() => setShowCustomMetricForm(null)}
           onSave={saveCustomMetric}
         />

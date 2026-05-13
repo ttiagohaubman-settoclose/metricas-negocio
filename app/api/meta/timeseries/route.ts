@@ -359,13 +359,13 @@ async function fetchInsights(
 // Calcula todas las métricas activas (curadas + custom) para un objeto de Meta data
 function calculateAllMetrics(
   metaData: any,
-  activestringds: string[],
+  activeMetricDefs: string[],
   customMetrics: { metric_id: string; formula: string }[],
 ): Record<string, number> {
   const result: Record<string, number> = {};
 
   // Primero: métricas curadas
-  activestringds.forEach((id) => {
+  activeMetricDefs.forEach((id) => {
     const def = METRIC_TO_META[id];
     if (def) {
       result[id] = def.extract(metaData);
@@ -443,7 +443,7 @@ export async function GET(request: Request) {
     .select("*")
     .order("display_order");
 
-  const agencyActivestringds = (agencyMetricsData || []).map((m: any) => m.metric_id);
+  const agencyActiveMetricDefs = (agencyMetricsData || []).map((m: any) => m.metric_id);
   const agencyCustomMetrics = agencyCustomMetricsData || [];
 
   // Agrupar por ad_account.id
@@ -478,9 +478,9 @@ export async function GET(request: Request) {
       // ============================================================
       // Determinar métricas activas para ESTA cuenta
       // ============================================================
-      const activestringds = activeMetricsByAccount[account.id] || DEFAULT_METRICS;
+      const activeMetricDefs = activeMetricsByAccount[account.id] || DEFAULT_METRICS;
       const customMetrics = customMetricsByAccount[account.id] || [];
-      const customstringds = customMetrics.map((c) => c.metric_id);
+      const customMetricDefs = customMetrics.map((c) => c.metric_id);
 
       // Para fórmulas custom, necesitamos también traer las métricas base que usan
       // Las traemos todas las métricas conocidas (METRIC_TO_META) para que las fórmulas siempre tengan datos
@@ -494,7 +494,7 @@ export async function GET(request: Request) {
       });
 
       // Lista total de métricas curadas a calcular
-      const allCuratedToFetch = Array.from(new Set([...activestringds, ...formulaMetrics, ...ALWAYS_FETCH]))
+      const allCuratedToFetch = Array.from(new Set([...activeMetricDefs, ...formulaMetrics, ...ALWAYS_FETCH]))
         .filter((id) => METRIC_TO_META[id]);
 
       // Determinar qué fields de Meta API pedir
@@ -507,10 +507,10 @@ export async function GET(request: Request) {
       if (metaFields.size === 0) {
         return {
           name: client.name, state: client.state, adAccountId: account.ad_account_id, ok: true,
-          activeMetrics: activestringds, customMetrics: customMetrics.map((c) => ({ id: c.metric_id, label: c.label, format: c.format, lower_better: c.lower_better })),
-          current: emptyMetricsFor(activestringds, customstringds),
-          previous: emptyMetricsFor(activestringds, customstringds),
-          series: dateList.map((date) => ({ date, ...emptyMetricsFor(activestringds, customstringds) })),
+          activeMetrics: activeMetricDefs, customMetrics: customMetrics.map((c) => ({ id: c.metric_id, label: c.label, format: c.format, lower_better: c.lower_better })),
+          current: emptyMetricsFor(activeMetricDefs, customMetricDefs),
+          previous: emptyMetricsFor(activeMetricDefs, customMetricDefs),
+          series: dateList.map((date) => ({ date, ...emptyMetricsFor(activeMetricDefs, customMetricDefs) })),
         };
       }
 
@@ -529,23 +529,23 @@ export async function GET(request: Request) {
 
         const series = dateList.map((date) => ({
           date,
-          ...(seriesByDate[date] || emptyMetricsFor(allCuratedToFetch, customstringds)),
+          ...(seriesByDate[date] || emptyMetricsFor(allCuratedToFetch, customMetricDefs)),
         }));
 
         const current = currentTotal[0]
           ? calculateAllMetrics(currentTotal[0], allCuratedToFetch, customMetrics)
-          : emptyMetricsFor(allCuratedToFetch, customstringds);
+          : emptyMetricsFor(allCuratedToFetch, customMetricDefs);
 
         const previous = previousTotal[0]
           ? calculateAllMetrics(previousTotal[0], allCuratedToFetch, customMetrics)
-          : emptyMetricsFor(allCuratedToFetch, customstringds);
+          : emptyMetricsFor(allCuratedToFetch, customMetricDefs);
 
         return {
           name: client.name,
           state: client.state,
           adAccountId: account.ad_account_id,
           ok: true,
-          activeMetrics: activestringds,
+          activeMetrics: activeMetricDefs,
           customMetrics: customMetrics.map((c) => ({
             id: c.metric_id,
             label: c.label,
@@ -561,10 +561,10 @@ export async function GET(request: Request) {
         console.error("Meta fetch error:", e);
         return {
           name: client.name, state: client.state, adAccountId: account.ad_account_id, ok: false,
-          activeMetrics: activestringds, customMetrics: [],
-          current: emptyMetricsFor(activestringds, customstringds),
-          previous: emptyMetricsFor(activestringds, customstringds),
-          series: dateList.map((date) => ({ date, ...emptyMetricsFor(activestringds, customstringds) })),
+          activeMetrics: activeMetricDefs, customMetrics: [],
+          current: emptyMetricsFor(activeMetricDefs, customMetricDefs),
+          previous: emptyMetricsFor(activeMetricDefs, customMetricDefs),
+          series: dateList.map((date) => ({ date, ...emptyMetricsFor(activeMetricDefs, customMetricDefs) })),
         };
       }
     })
@@ -575,7 +575,7 @@ export async function GET(request: Request) {
     previousRange: prev,
     clients: results,
     agency: {
-      activeMetrics: agencyActivestringds,
+      activeMetrics: agencyActiveMetricDefs,
       customMetrics: agencyCustomMetrics.map((c: any) => ({
         id: c.metric_id,
         label: c.label,
