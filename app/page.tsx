@@ -926,7 +926,7 @@ function AgencyView({ clients, meta, ghl, market, theme, onDrilldown, agency }: 
             <KPI key={m.id} label={m.label} value={formatValue(cur, m.format)}
               change={change} isPositive={isPositive} sparkData={aggSeries[m.id]}
               selected={selectedMetric === m.id}
-              onClick={() => { setSelectedMetric(m.id as MetricId); onDrilldown(m.id as MetricId); }} />
+             onClick={() => { setSelectedMetric(m.id as string); onDrilldown(m.id as string); }}
           );
         })}
       </div>
