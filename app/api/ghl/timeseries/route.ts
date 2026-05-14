@@ -17,7 +17,9 @@ function getDateRange(preset: string | null, since: string | null, until: string
       untilStr: until,
     };
   }
-  const now = new Date();
+  // Usar zona horaria de los clientes (US Eastern)
+  const tzString = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+  const now = new Date(tzString);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   let start: Date;
   const end = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
