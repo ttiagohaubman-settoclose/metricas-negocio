@@ -862,11 +862,16 @@ function AgencyView({ clients, meta, ghl, market, theme, onDrilldown, agency }: 
       if (!c.current) return;
       cur.spend += c.current.spend || 0;
       cur.linkClicks += c.current.linkClicks || 0;
-      cur.leads += c.current.leads || 0;
+      // Solo sumar leads de clientes que tienen "leads" como métrica activa
+      if (c.activeMetrics?.includes("leads")) {
+        cur.leads += c.current.leads || 0;
+      }
       cur.landingPageViews += c.current.landingPageViews || 0;
       prev.spend += c.previous?.spend || 0;
       prev.linkClicks += c.previous?.linkClicks || 0;
-      prev.leads += c.previous?.leads || 0;
+     if (c.activeMetrics?.includes("leads")) {
+        prev.leads += c.previous?.leads || 0;
+      }
       prev.landingPageViews += c.previous?.landingPageViews || 0;
     });
     cur.costPerLinkClick = cur.linkClicks > 0 ? cur.spend / cur.linkClicks : 0;
