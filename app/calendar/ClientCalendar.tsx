@@ -251,7 +251,7 @@ function WeekView({ rangeStart, events, onEventClick }: { rangeStart: Date; even
         return (
           <div key={i} style={{ background: "var(--bg-elevated)", borderRadius: 8, padding: 10, minHeight: 200 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{dayNames[d.getDay()]}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: isToday ? "var(--ink)" : "var(--ink-muted)", marginBottom: 8, display: "inline-block", padding: isToday ? "0 8px" : 0, background: isToday ? "var(--ink)" : "transparent", color: isToday ? "var(--bg)" : "var(--ink-muted)" as any, borderRadius: 4 }}>{d.getDate()}</div>
+<div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, display: "inline-block", padding: isToday ? "0 8px" : 0, background: isToday ? "var(--ink)" : "transparent", color: isToday ? "var(--bg)" : "var(--ink-muted)", borderRadius: 4 }}>{d.getDate()}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {dayEvents.map((e) => {
                 const c = getColorForClient(e.clientName);
