@@ -116,6 +116,7 @@ async function getCountsForRange(token: string, locationId: string, calendars: {
   await Promise.all(
     allEvents.map(async (e: any) => {
       // Filtrar por dateAdded: solo contar appointments creados dentro del rango
+      console.log("GHL appointment object:", JSON.stringify(e, null, 2));
       const dateAdded = e.dateAdded ? new Date(e.dateAdded).getTime() : 0;
       if (dateAdded < startMs || dateAdded > endMs) return;
 
