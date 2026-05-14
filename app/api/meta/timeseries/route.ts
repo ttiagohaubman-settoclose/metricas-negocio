@@ -254,7 +254,9 @@ function toDateString(d: Date) {
 function getDateRange(preset: string | null, since: string | null, until: string | null) {
   if (since && until) return { since, until };
 
-  const now = new Date();
+ // Usar zona horaria de los clientes (US Eastern) en lugar de UTC del servidor
+  const tzString = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+  const now = new Date(tzString);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   let start: Date;
   let end: Date = today;
