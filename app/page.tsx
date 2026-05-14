@@ -1524,7 +1524,7 @@ function SalesByClientChart({ clients, ghl }: any) {
 }
 
 function DrilldownModal({ metric, clients, meta, ghl, onClose }: any) {
-  const def = metricsToShow.find((m) => m.id === metric)!;
+  const def: any = { id: metric, label: metric, format: "number", lowerBetter: false };
   const rows = clients.map((cfg: any) => {
     const m = meta.find((x: any) => x.name === cfg.name);
     return {
