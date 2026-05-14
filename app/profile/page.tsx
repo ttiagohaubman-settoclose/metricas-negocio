@@ -164,6 +164,8 @@ async function handleDelete(clientId: string) {
           ))}
         </div>
       )}
+
+      <PasswordSection />
     </div>
   );
 }
@@ -263,3 +265,163 @@ function ClientAvatarRow({ client, uploading, onUpload, onDelete }: {
     </div>
   );
   }
+  // ============================================================ PASSWORD SECTION ============================================================
+function PasswordSection() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  async function handleSubmit() {
+    setError("");
+    setSuccess("");
+
+    if (!currentPassword || !newPassword) {
+      setError("Completá ambos campos");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError("La nueva contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/profile/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+
+      setSuccess("Contraseña actualizada correctamente");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setSuccess(""), 4000);
+    } catch (e: any) {
+      setError(e.message);
+    }
+    setSaving(false);
+  }
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      <h2 style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em", color: "var(--ink)", marginBottom: 4 }}>
+        Cambiar contraseña
+      </h2>
+      <div style={{ fontSize: 13, color: "var(--ink-muted)", marginBottom: 16 }}>
+        Actualizá la contraseña de tu cuenta
+      </div>
+
+      <div style={{
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        borderRadius: 12,
+        padding: 20,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+        maxWidth: 480,
+      }}>
+        <PasswordField
+          label="Contraseña actual"
+          value={currentPassword}
+          onChange={setCurrentPassword}
+          disabled={saving}
+        />
+        <PasswordField
+          label="Nueva contraseña"
+          value={newPassword}
+          onChange={setNewPassword}
+          disabled={saving}
+        />
+        <PasswordField
+          label="Confirmar nueva contraseña"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          disabled={saving}
+        />
+
+        {error && (
+          <div style={{
+            background: "rgba(255,80,80,0.1)",
+            border: "1px solid rgba(255,80,80,0.3)",
+            color: "#ff8080",
+            padding: "10px 14px", borderRadius: 8,
+            fontSize: 12,
+          }}>{error}</div>
+        )}
+
+        {success && (
+          <div style={{
+            background: "rgba(80,200,120,0.1)",
+            border: "1px solid rgba(80,200,120,0.3)",
+            color: "#80c878",
+            padding: "10px 14px", borderRadius: 8,
+            fontSize: 12,
+          }}>{success}</div>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={saving}
+          style={{
+            background: "var(--ink)",
+            color: "var(--bg)",
+            border: "none",
+            padding: "10px 18px",
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: saving ? "not-allowed" : "pointer",
+            fontFamily: "inherit",
+            opacity: saving ? 0.6 : 1,
+            alignSelf: "flex-start",
+            marginTop: 4,
+          }}
+        >
+          {saving ? "Guardando..." : "Cambiar contraseña"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PasswordField({ label, value, onChange, disabled }: { label: string; value: string; onChange: (v: string) => void; disabled: boolean }) {
+  return (
+    <div>
+      <label style={{
+        display: "block", fontSize: 11, fontWeight: 600,
+        textTransform: "uppercase", letterSpacing: "0.06em",
+        color: "var(--ink-muted)", marginBottom: 6,
+      }}>
+        {label}
+      </label>
+      <input
+        type="password"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        style={{
+          width: "100%",
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-strong)",
+          borderRadius: 8,
+          padding: "10px 12px",
+          fontSize: 13,
+          color: "var(--ink)",
+          fontFamily: "inherit",
+          outline: "none",
+        }}
+      />
+    </div>
+  );
+}
