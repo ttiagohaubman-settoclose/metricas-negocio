@@ -976,7 +976,7 @@ function AgencyView({ clients, meta, ghl, market, theme, onDrilldown, agency }: 
           seriesLabels={seriesLabels}
           format={selectedDef.format}
           selectedMetric={selectedMetric}
-          onSelectMetric={(mm: any) => setSelectedMetric(mm as MetricDef)}
+          onSelectMetric={(mm: any) => setSelectedMetric(mm as string)}
           theme={theme}
           metricsToShow={metricsToShow}
         />
