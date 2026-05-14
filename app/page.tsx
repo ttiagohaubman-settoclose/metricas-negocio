@@ -1126,7 +1126,7 @@ function ClientView({ clientId, clients, meta, ghl, market, theme, onDrilldown, 
           seriesLabels={series.map((s: any) => s.date)}
           format={selectedDef.format}
           selectedMetric={selectedMetric}
-          onSelectMetric={(mm: any) => setSelectedMetric(mm as MetricDef)}
+          onSelectMetric={(mm: any) => setSelectedMetric(mm as string)}
           theme={theme}
           metricsToShow={metricsToShow}
         />
