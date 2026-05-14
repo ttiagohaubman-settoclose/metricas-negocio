@@ -117,7 +117,10 @@ async function getCountsForRange(token: string, locationId: string, calendars: {
     allEvents.map(async (e: any) => {
       // Filtrar por dateAdded: solo contar appointments creados dentro del rango
       console.log("GHL appointment object:", JSON.stringify(e, null, 2));
-      const dateAdded = e.dateAdded ? new Date(e.dateAdded).getTime() : 0;
+      // Convertir dateAdded (UTC) a zona horaria ET para comparar correctamente
+      const dateAddedUTC = e.dateAdded ? new Date(e.dateAdded) : null;
+      const dateAddedET = dateAddedUTC ? new Date(dateAddedUTC.toLocaleString("en-US", { timeZone: "America/New_York" })) : null;
+      const dateAdded = dateAddedET ? dateAddedET.getTime() : 0;
       if (dateAdded < startMs || dateAdded > endMs) return;
 
       const contact = await fetchContact(token, e.contactId);
