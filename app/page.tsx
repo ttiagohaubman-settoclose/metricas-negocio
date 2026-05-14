@@ -1251,7 +1251,7 @@ function MainChart({ eyebrow, title, value, change, isPositive, seriesData, seri
         </div>
         <div className="metric-selector">
           <button className={`metric-select-btn ${open ? "open" : ""}`} onClick={() => setOpen(!open)}>
-            <span>{metricsToShow.find((m) => m.id === selectedMetric)?.label}</span>
+            <span>{metricsToShow.find((m: any) => m.id === selectedMetric)?.label}</span>
             <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
           <div className={`metric-dropdown ${open ? "open" : ""}`}>
