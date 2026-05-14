@@ -75,7 +75,25 @@ export default function ProfilePage() {
     }
     setUploadingId(null);
   }
-
+async function handleDelete(clientId: string) {
+    if (!confirm("¿Eliminar la foto de perfil?")) return;
+    setError("");
+    setSuccess("");
+    setUploadingId(clientId);
+    try {
+      const res = await fetch(`/api/profile/upload-avatar?client_id=${clientId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      setSuccess("Foto eliminada");
+      setTimeout(() => setSuccess(""), 3000);
+      loadMyClients();
+    } catch (e: any) {
+      setError(e.message);
+    }
+    setUploadingId(null);
+  }
   return (
     <div style={{
       minHeight: "100vh",
@@ -141,6 +159,7 @@ export default function ProfilePage() {
               client={c}
               uploading={uploadingId === c.id}
               onUpload={(file) => handleUpload(c.id, file)}
+              onDelete={() => handleDelete(c.id)}
             />
           ))}
         </div>
@@ -149,10 +168,11 @@ export default function ProfilePage() {
   );
 }
 
-function ClientAvatarRow({ client, uploading, onUpload }: {
+function ClientAvatarRow({ client, uploading, onUpload, onDelete }: {
   client: Client;
   uploading: boolean;
   onUpload: (file: File) => void;
+  onDelete: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -201,25 +221,44 @@ function ClientAvatarRow({ client, uploading, onUpload }: {
           }}
           style={{ display: "none" }}
         />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          style={{
-            background: "var(--ink)",
-            color: "var(--bg)",
-            border: "none",
-            padding: "10px 16px",
-            borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: uploading ? "not-allowed" : "pointer",
-            fontFamily: "inherit",
-            opacity: uploading ? 0.6 : 1,
-          }}
-        >
-          {uploading ? "Uploading..." : (client.avatar_url ? "Change" : "Upload")}
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            style={{
+              background: "var(--ink)",
+              color: "var(--bg)",
+              border: "none",
+              padding: "10px 16px",
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: uploading ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+              opacity: uploading ? 0.6 : 1,
+            }}
+          >
+            {uploading ? "Uploading..." : (client.avatar_url ? "Change" : "Upload")}
+          </button>
+          {client.avatar_url && !uploading && (
+            <button
+              onClick={() => onDelete && onDelete()}
+              style={{
+                background: "transparent",
+                border: "1px solid var(--border-strong)",
+                color: "var(--ink-muted)",
+                padding: "10px 14px",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Eliminar
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
-}

@@ -87,3 +87,51 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+export async function DELETE(request: Request) {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const url = new URL(request.url);
+    const clientId = url.searchParams.get("client_id");
+    if (!clientId) {
+      return NextResponse.json({ error: "client_id required" }, { status: 400 });
+    }
+
+    // Verificar permisos
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const isAdmin = profile?.role === "admin";
+
+    if (!isAdmin) {
+      const { data: assignment } = await supabaseAdmin
+        .from("user_clients")
+        .select("client_id")
+        .eq("user_id", user.id)
+        .eq("client_id", clientId)
+        .single();
+      if (!assignment) {
+        return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+      }
+    }
+
+    // Limpiar avatar_url en la base
+    const { error } = await supabaseAdmin
+      .from("clients")
+      .update({ avatar_url: null })
+      .eq("id", clientId);
+
+    if (error) throw error;
+
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
