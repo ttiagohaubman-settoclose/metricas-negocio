@@ -192,7 +192,7 @@ function MonthView({ currentDate, events, onEventClick }: { currentDate: Date; e
           const dayEvents = eventsByDay[key] || [];
           return (
             <div key={i} style={{ background: "var(--surface)", minHeight: 70, padding: 5, opacity: isCurrentMonth ? 1 : 0.35 }}>
-              <div style={{ fontSize: 12, fontWeight: isToday ? 700 : 500, color: isToday ? "var(--ink)" : "var(--ink-muted)", marginBottom: 4, display: "inline-block", padding: isToday ? "2px 6px" : 0, background: isToday ? "var(--ink)" : "transparent", color: isToday ? "var(--bg)" : "var(--ink-muted)" as any, borderRadius: 4 }}>{d.getDate()}</div>
+              <div style={{ fontSize: 12, fontWeight: isToday ? 700 : 500, marginBottom: 4, display: "inline-block", padding: isToday ? "2px 6px" : 0, background: isToday ? "var(--ink)" : "transparent", color: isToday ? "var(--bg)" : "var(--ink-muted)", borderRadius: 4 }}>{d.getDate()}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {dayEvents.slice(0, 2).map((e) => {
                   const c = getColorForClient(e.clientName);
