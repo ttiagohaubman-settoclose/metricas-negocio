@@ -866,11 +866,18 @@ function AgencyView({ clients, meta, ghl, market, theme, onDrilldown, agency }: 
       if (c.activeMetrics?.includes("leads")) {
         cur.leads += c.current.leads || 0;
       }
+      // Sumar messagingStarted solo de clientes que lo tienen activado
+      if (c.activeMetrics?.includes("messagingStarted")) {
+        cur.messagingStarted = (cur.messagingStarted || 0) + (c.current.messagingStarted || 0);
+      }
       cur.landingPageViews += c.current.landingPageViews || 0;
       prev.spend += c.previous?.spend || 0;
       prev.linkClicks += c.previous?.linkClicks || 0;
      if (c.activeMetrics?.includes("leads")) {
         prev.leads += c.previous?.leads || 0;
+      }
+      if (c.activeMetrics?.includes("messagingStarted")) {
+        prev.messagingStarted = (prev.messagingStarted || 0) + (c.previous?.messagingStarted || 0);
       }
       prev.landingPageViews += c.previous?.landingPageViews || 0;
     });
