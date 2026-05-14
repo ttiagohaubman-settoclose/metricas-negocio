@@ -99,25 +99,32 @@ function emptyCounts() {
 }
 
 async function getCountsForRange(token: string, locationId: string, calendars: { english: string; spanish: string }, startMs: number, endMs: number) {
+  // Expandir el rango de fetch a GHL para incluir appointments cuya CITA es futura
+  // pero que fueron CREADOS dentro del rango buscado.
+  const NINETY_DAYS = 90 * 24 * 60 * 60 * 1000;
+  const fetchStartMs = startMs - NINETY_DAYS;
+  const fetchEndMs = endMs + NINETY_DAYS;
+
   const [english, spanish] = await Promise.all([
-    fetchEvents(token, locationId, calendars.english, startMs, endMs),
-    fetchEvents(token, locationId, calendars.spanish, startMs, endMs),
+    fetchEvents(token, locationId, calendars.english, fetchStartMs, fetchEndMs),
+    fetchEvents(token, locationId, calendars.spanish, fetchStartMs, fetchEndMs),
   ]);
   const allEvents = [...english, ...spanish];
-
   const counts = emptyCounts();
   const leads: any[] = [];
   const seriesByDate: Record<string, any> = {};
-
   await Promise.all(
     allEvents.map(async (e: any) => {
+      // Filtrar por dateAdded: solo contar appointments creados dentro del rango
+      const dateAdded = e.dateAdded ? new Date(e.dateAdded).getTime() : 0;
+      if (dateAdded < startMs || dateAdded > endMs) return;
+
       const contact = await fetchContact(token, e.contactId);
       const tags = contact?.tags || [];
       const status = determineStatus(e.appointmentStatus, tags);
       counts[status as keyof typeof counts]++;
       counts.total++;
-
-      const date = e.startTime ? toDateString(new Date(e.startTime)) : "";
+      const date = e.dateAdded ? toDateString(new Date(e.dateAdded)) : "";
       if (date) {
         if (!seriesByDate[date]) {
           seriesByDate[date] = { date, appointments: 0, venta: 0, pagada: 0, showed: 0 };
@@ -127,6 +134,7 @@ async function getCountsForRange(token: string, locationId: string, calendars: {
         if (status === "pagada") seriesByDate[date].pagada++;
         if (status === "showed") seriesByDate[date].showed++;
       }
+  
 
       const name = contact ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "Sin nombre" : "Sin nombre";
       leads.push({
