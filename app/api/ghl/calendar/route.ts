@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { getActiveClients } from "@/app/lib/clients-server";
 import { createSupabaseServerClient } from "@/app/lib/supabase-server";
-import { getClientsForUser } from "@/app/lib/clients-server";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 
@@ -40,11 +40,15 @@ async function fetchContact(token: string, contactId: string) {
   }
 }
 
-function getCustomFieldValue(contact: any, fieldName: string): string {
+const CUSTOM_FIELD_IDS = {
+  owner_or_renter: "HGBoPeXJH7uGkW72Jiwv",
+  water_type: "Z9wSwqwXHuVy3MP8wsaq",
+};
+
+function getCustomFieldById(contact: any, fieldId: string): string {
   if (!contact?.customFields) return "";
-  // Buscar por nombre exacto en los custom fields
   for (const field of contact.customFields) {
-    if (field.fieldKey === fieldName || field.name === fieldName) {
+    if (field.id === fieldId) {
       return field.value || "";
     }
   }
@@ -57,9 +61,17 @@ export async function GET(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const isAdmin = profile?.role === "admin";
+
     const url = new URL(request.url);
-    const sinceParam = url.searchParams.get("since"); // YYYY-MM-DD
-    const untilParam = url.searchParams.get("until"); // YYYY-MM-DD
+    const sinceParam = url.searchParams.get("since");
+    const untilParam = url.searchParams.get("until");
 
     if (!sinceParam || !untilParam) {
       return NextResponse.json({ error: "since and until required" }, { status: 400 });
@@ -69,7 +81,16 @@ export async function GET(request: Request) {
     const endMs = new Date(untilParam + "T23:59:59").getTime();
 
     const token = process.env.GHL_API_TOKEN!;
-    const clients = await getClientsForUser(user.id);
+    let clients = await getActiveClients();
+
+    if (!isAdmin) {
+      const { data: assignments } = await supabase
+        .from("user_clients")
+        .select("client_id")
+        .eq("user_id", user.id);
+      const allowedIds = new Set((assignments || []).map((a) => a.client_id));
+      clients = clients.filter((c) => allowedIds.has(c.id));
+    }
 
     const results = await Promise.all(
       clients.map(async (client) => {
@@ -78,9 +99,11 @@ export async function GET(request: Request) {
             fetchEvents(token, client.ghl_location_id, client.calendar_english_id, startMs, endMs),
             fetchEvents(token, client.ghl_location_id, client.calendar_spanish_id, startMs, endMs),
           ]);
+
+          const englishIds = new Set(english.map((e: any) => e.id));
+
           const allEvents = [...english, ...spanish];
 
-          // Para cada event traer info del contacto
           const eventsWithDetails = await Promise.all(
             allEvents.map(async (e: any) => {
               const contact = await fetchContact(token, e.contactId);
@@ -88,8 +111,8 @@ export async function GET(request: Request) {
                 ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "Sin nombre"
                 : "Sin nombre";
 
-              const ownerOrRenter = getCustomFieldValue(contact, "owner_or_renter");
-              const waterType = getCustomFieldValue(contact, "water_type");
+                const ownerOrRenter = getCustomFieldById(contact, CUSTOM_FIELD_IDS.owner_or_renter);
+              const waterType = getCustomFieldById(contact, CUSTOM_FIELD_IDS.water_type);
 
               return {
                 appointmentId: e.id,
@@ -102,7 +125,7 @@ export async function GET(request: Request) {
                 appointmentStatus: e.appointmentStatus,
                 ownerOrRenter,
                 waterType,
-                language: english.includes(e) ? "english" : "spanish",
+                language: englishIds.has(e.id) ? "english" : "spanish",
               };
             })
           );
@@ -115,9 +138,7 @@ export async function GET(request: Request) {
       })
     );
 
-    // Aplastar todos los eventos en una sola lista
     const allEvents = results.flatMap((r) => r.events);
-
     return NextResponse.json({ events: allEvents });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

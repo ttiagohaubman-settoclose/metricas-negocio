@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useDashboardData, type DatePreset } from "./hooks/useDashboardData";
 import { exportFullReport, type ExportContext } from "./lib/pdf-export";
-
+import ClientCalendar from "./calendar/ClientCalendar";
 const fmt = {
   currency: (v: number) => "$" + Math.round(v).toLocaleString("en-US"),
   currency2: (v: number) => "$" + v.toFixed(2),
@@ -957,6 +957,7 @@ function AgencyView({ clients, meta, ghl, market, theme, onDrilldown, agency }: 
         })()}
       </div>
 
+
       <SectionHeader title="Resultado económico agencia" />
       <div className="kpi-grid">
         <KPI label="Revenue total clientes" value={fmt.currency(economics.revenue)} />
@@ -1003,6 +1004,8 @@ function AgencyView({ clients, meta, ghl, market, theme, onDrilldown, agency }: 
           <SalesByClientChart clients={clients} ghl={ghl} />
         </div>
       </div>
+      <SectionHeader title="Calendario · Vista consolidada" />
+      <ClientCalendar />
     </div>
   );
 }
@@ -1106,7 +1109,6 @@ function ClientView({ clientId, clients, meta, ghl, market, theme, onDrilldown, 
           return <KPI key={i.key} label={i.label} value={fmt.number(counts[i.key] || 0)} change={change} isPositive={isPositive} />;
         })}
       </div>
-
       <SectionHeader title="Resumen económico" />
       <div className="kpi-grid">
         <KPI label="Revenue cliente" value={fmt.currency(revenue)} />
@@ -1153,6 +1155,8 @@ function ClientView({ clientId, clients, meta, ghl, market, theme, onDrilldown, 
           <PipelineDonut ghl={[g].filter(Boolean)} />
         </div>
       </div>
+      <SectionHeader title="Calendario" />
+      <ClientCalendar filterClientName={cfg?.name} />
     </div>
   );
 }
