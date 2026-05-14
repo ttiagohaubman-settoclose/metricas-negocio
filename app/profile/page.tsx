@@ -262,3 +262,4 @@ function ClientAvatarRow({ client, uploading, onUpload, onDelete }: {
       </div>
     </div>
   );
+  }
