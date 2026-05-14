@@ -12,7 +12,6 @@ export type ClientRecord = {
   state: string;
   state_code: string;
   avatar_url: string | null;
-  avatar_url: string | null;
   ghl_location_id: string;
   ghl_tag: string;
   calendar_english_id: string;
