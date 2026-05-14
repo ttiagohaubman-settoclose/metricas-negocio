@@ -908,7 +908,7 @@ function AgencyView({ clients, meta, ghl, market, theme, onDrilldown, agency }: 
     return { revenue, fees, ventas, pagadas, profit: revenue - totals.current.spend - fees };
   }, [ghl, totals, clients]);
 
-  const selectedDef = metricsToShow.find((m) => m.id === selectedMetric)!;
+  const selectedDef = metricsToShow.find((m: any) => m.id === selectedMetric)!;
   const c = totals.current[selectedMetric];
   const p = totals.previous[selectedMetric];
   const { change, isPositive } = calcChange(c, p, selectedDef.lowerBetter);
