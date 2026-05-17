@@ -15,7 +15,9 @@ function getDateRange(preset: string | null, since: string | null, until: string
       untilMs: new Date(until + "T23:59:59").getTime(),
     };
   }
-  const now = new Date();
+  // Usar zona horaria de los clientes (US Eastern)
+  const tzString = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+  const now = new Date(tzString);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   let start: Date;
   const end = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
@@ -129,10 +131,24 @@ export async function GET(request: Request) {
         });
 
         // 2. APPOINTMENTS por calendario (idioma)
-        const [englishEvents, spanishEvents] = await Promise.all([
-          fetchEvents(token, client.ghl_location_id, client.calendar_english_id, sinceMs, untilMs),
-          fetchEvents(token, client.ghl_location_id, client.calendar_spanish_id, sinceMs, untilMs),
+        // Pedimos un rango amplio (90 días para atrás y adelante) y filtramos por dateAdded
+        const NINETY_DAYS = 90 * 24 * 60 * 60 * 1000;
+        const [englishEventsAll, spanishEventsAll] = await Promise.all([
+          fetchEvents(token, client.ghl_location_id, client.calendar_english_id, sinceMs - NINETY_DAYS, untilMs + NINETY_DAYS),
+          fetchEvents(token, client.ghl_location_id, client.calendar_spanish_id, sinceMs - NINETY_DAYS, untilMs + NINETY_DAYS),
         ]);
+
+        // Filtrar por dateAdded (en zona horaria ET) dentro del rango pedido
+        const filterByDateAdded = (events: any[]) => events.filter((e: any) => {
+          if (!e.dateAdded) return false;
+          const utc = new Date(e.dateAdded);
+          const et = new Date(utc.toLocaleString("en-US", { timeZone: "America/New_York" }));
+          const t = et.getTime();
+          return t >= sinceMs && t <= untilMs;
+        });
+
+        const englishEvents = filterByDateAdded(englishEventsAll);
+        const spanishEvents = filterByDateAdded(spanishEventsAll);
 
         // 3. SALES: appointments con tag venta/pagada
         const allEvents = [
