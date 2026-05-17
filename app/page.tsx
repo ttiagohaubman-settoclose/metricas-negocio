@@ -1406,16 +1406,49 @@ function PipelineDonut({ ghl }: { ghl: any[] }) {
     return acc;
   }, {});
 
-  const segments = [
-    { key: "scheduled", label: "Scheduled", value: totals.scheduled || 0, color: "#8a8a8a" },
-    { key: "showed", label: "Showed", value: totals.showed || 0, color: "#bdbdbd" },
-    { key: "venta", label: "Venta", value: totals.venta || 0, color: "#ffffff" },
-    { key: "pagada", label: "Pagada", value: totals.pagada || 0, color: "#e0e0e0" },
-    { key: "noshow", label: "No Show", value: totals.noshow || 0, color: "#555555" },
-    { key: "cancelled", label: "Cancelled", value: totals.cancelled || 0, color: "#3a3a3a" },
-  ].filter((s) => s.value > 0);
+  const scheduled = totals.scheduled || 0;
+  const showed = totals.showed || 0;
+  const venta = (totals.venta || 0) + (totals.pagada || 0);
+  const noShows = (totals.noshow || 0) + (totals.cancelled || 0);
 
-  return <DonutSVG segments={segments} />;
+  if (scheduled === 0) {
+    return <div style={{ padding: 24, textAlign: "center", color: "var(--ink-muted)", fontSize: 13 }}>Sin datos en este período</div>;
+  }
+
+  const showRate = scheduled > 0 ? (showed / scheduled) * 100 : 0;
+  const noShowRate = scheduled > 0 ? (noShows / scheduled) * 100 : 0;
+  const saleRate = showed > 0 ? (venta / showed) * 100 : 0;
+
+  const rings = [
+    { label: "Scheduled → Showed", value: showRate, count: `${showed}/${scheduled}` },
+    { label: "Scheduled → Canc/No-show", value: noShowRate, count: `${noShows}/${scheduled}` },
+    { label: "Showed → Venta", value: saleRate, count: `${venta}/${showed}` },
+  ];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "8px 4px" }}>
+      {rings.map((r) => (
+        <div key={r.label}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+            <div style={{ fontSize: 11, color: "var(--ink-muted)", fontWeight: 500 }}>{r.label}</div>
+            <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+              <span style={{ fontSize: 10, color: "var(--ink-dim)" }}>{r.count}</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: "var(--ink)" }}>{r.value.toFixed(0)}%</span>
+            </div>
+          </div>
+          <div style={{ height: 8, borderRadius: 4, background: "var(--bg-elevated)", overflow: "hidden", border: "1px solid var(--border)" }}>
+            <div style={{
+              height: "100%",
+              width: `${Math.min(100, r.value)}%`,
+              background: "var(--ink)",
+              transition: "width 0.4s ease",
+              borderRadius: 4,
+            }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function MarketDonut({ market, kind }: { market: any; kind: "leads" | "appointments" | "sales" }) {
