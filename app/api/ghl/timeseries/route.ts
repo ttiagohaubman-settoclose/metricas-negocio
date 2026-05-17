@@ -116,7 +116,6 @@ async function getCountsForRange(token: string, locationId: string, calendars: {
   await Promise.all(
     allEvents.map(async (e: any) => {
       // Filtrar por dateAdded: solo contar appointments creados dentro del rango
-      console.log("GHL appointment object:", JSON.stringify(e, null, 2));
       // Convertir dateAdded (UTC) a zona horaria ET para comparar correctamente
       const dateAddedUTC = e.dateAdded ? new Date(e.dateAdded) : null;
       const dateAddedET = dateAddedUTC ? new Date(dateAddedUTC.toLocaleString("en-US", { timeZone: "America/New_York" })) : null;
@@ -126,8 +125,16 @@ async function getCountsForRange(token: string, locationId: string, calendars: {
       const contact = await fetchContact(token, e.contactId);
       const tags = contact?.tags || [];
       const status = determineStatus(e.appointmentStatus, tags);
-      counts[status as keyof typeof counts]++;
+
+      // Cada appointment creado en el período cuenta SIEMPRE como scheduled
+      counts.scheduled++;
       counts.total++;
+
+      // Y además, según su status actual, suma a la categoría correspondiente
+      // (excepto "scheduled" porque ya lo contamos arriba)
+      if (status !== "scheduled") {
+        counts[status as keyof typeof counts]++;
+      }
       const date = e.dateAdded ? toDateString(new Date(e.dateAdded)) : "";
       if (date) {
         if (!seriesByDate[date]) {
