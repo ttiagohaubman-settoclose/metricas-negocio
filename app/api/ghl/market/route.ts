@@ -71,8 +71,10 @@ async function searchContactsByTag(token: string, locationId: string, tag: strin
     locationId,
     pageLimit: 100,
     filters: [
-      { field: "tags", operator: "contains", value: tag },
-      { field: "dateAdded", operator: "between", value: { gte: new Date(sinceMs).toISOString(), lte: new Date(untilMs).toISOString() } },
+      [
+        { field: "tags", operator: "contains", value: tag },
+        { field: "dateAdded", operator: "range", value: { gte: new Date(sinceMs).toISOString(), lte: new Date(untilMs).toISOString() } },
+      ],
     ],
   };
 
@@ -86,8 +88,12 @@ async function searchContactsByTag(token: string, locationId: string, tag: strin
     },
     body: JSON.stringify(body),
   });
-  if (!res.ok) return [];
+ if (!res.ok) {
+    console.log("GHL search FAILED for tag", tag, "status:", res.status);
+    return [];
+  }
   const data = await res.json();
+  console.log("GHL search response for tag", tag, ":", JSON.stringify(data, null, 2).slice(0, 500));
   return data.contacts || [];
 }
 

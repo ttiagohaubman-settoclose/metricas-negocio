@@ -9,14 +9,7 @@ function toDateString(d: Date) {
 }
 
 function getDateRange(preset: string | null, since: string | null, until: string | null) {
-  if (since && until) {
-    return {
-      sinceMs: new Date(since + "T00:00:00").getTime(),
-      untilMs: new Date(until + "T23:59:59").getTime(),
-      sinceStr: since,
-      untilStr: until,
-    };
-  }
+  
   // Usar zona horaria de los clientes (US Eastern)
   const tzString = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
   const now = new Date(tzString);
@@ -98,7 +91,7 @@ function emptyCounts() {
   return { scheduled: 0, showed: 0, venta: 0, pagada: 0, noshow: 0, cancelled: 0, total: 0 };
 }
 
-async function getCountsForRange(token: string, locationId: string, calendars: { english: string; spanish: string }, startMs: number, endMs: number) {
+async function getCountsForRange(token: string, locationId: string, calendars: { english: string; spanish: string }, startMs: number, endMs: number, clientName: string = "") {
   // Expandir el rango de fetch a GHL para incluir appointments cuya CITA es futura
   // pero que fueron CREADOS dentro del rango buscado.
   const NINETY_DAYS = 90 * 24 * 60 * 60 * 1000;
@@ -194,11 +187,11 @@ export async function GET(request: Request) {
           getCountsForRange(token, client.ghl_location_id, {
             english: client.calendar_english_id,
             spanish: client.calendar_spanish_id,
-          }, range.sinceMs, range.untilMs),
+          }, range.sinceMs, range.untilMs, client.name),
           getCountsForRange(token, client.ghl_location_id, {
             english: client.calendar_english_id,
             spanish: client.calendar_spanish_id,
-          }, prevRange.sinceMs, prevRange.untilMs),
+          }, prevRange.sinceMs, prevRange.untilMs, client.name),
         ]);
 
         const series = dateList.map((date) => current.seriesByDate[date] || { date, appointments: 0, venta: 0, pagada: 0, showed: 0 });

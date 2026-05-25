@@ -21,6 +21,7 @@ type CalendarEvent = {
   endTime: string;
   address: string;
   appointmentStatus: string;
+  phone: string;
   ownerOrRenter: string;
   waterType: string;
   language: string;
@@ -333,6 +334,7 @@ function EventDetailModal({ event, onClose }: { event: CalendarEvent; onClose: (
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
+          <DetailRow label="Teléfono" value={event.phone ? formatPhone(event.phone) : "—"} />
           <DetailRow label="Horario" value={timeStr} />
           <DetailRow label="Idioma" value={event.language === "english" ? "Inglés" : "Español"} />
           <DetailRow label="Owner / Renter" value={event.ownerOrRenter || "—"} />
@@ -345,6 +347,20 @@ function EventDetailModal({ event, onClose }: { event: CalendarEvent; onClose: (
   );
 }
 
+function formatPhone(raw: string): string {
+  if (!raw) return "";
+  // Quitar todo lo que no sea número
+  const digits = raw.replace(/\D/g, "");
+  // Asumimos US (10 dígitos o 11 con código país 1)
+  if (digits.length === 10) {
+    return `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  }
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  }
+  // Si no encaja, devolverlo tal cual
+  return raw;
+}
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>

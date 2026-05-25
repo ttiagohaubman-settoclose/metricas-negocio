@@ -123,6 +123,7 @@ export async function GET(request: Request) {
                 endTime: e.endTime,
                 address: e.address || "",
                 appointmentStatus: e.appointmentStatus,
+                phone: contact?.phone || "",
                 ownerOrRenter,
                 waterType,
                 language: englishIds.has(e.id) ? "english" : "spanish",
