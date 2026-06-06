@@ -117,6 +117,9 @@ async function getCountsForRange(token: string, locationId: string, calendars: {
 
       const contact = await fetchContact(token, e.contactId);
       const tags = contact?.tags || [];
+      if (tags.some((t: string) => t.toLowerCase().includes("venta") || t.toLowerCase().includes("pagad"))) {
+        console.log("Lead con tag venta/pagada:", { client: clientName, tags, appointmentStatus: e.appointmentStatus });
+      }
       const status = determineStatus(e.appointmentStatus, tags);
 
       // Cada appointment creado en el período cuenta SIEMPRE como scheduled
